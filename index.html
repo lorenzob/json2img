@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+
+<title>JSON2IMG</title>
+
+
+<!--
+  DO NOT SIMPLY COPY THOSE LINES. Download the JS and CSS files from the
+  latest release (https://github.com/enyo/dropzone/releases/latest), and
+  host them yourself!
+-->
+
+<script src="/files/blob-util.min.js"></script>
+<script src="/files/dropzone.js"></script>
+<script src="/files/jszip.min.js"></script>
+<script src="/files/FileSaver.js"></script>
+
+<link rel="stylesheet" href="/files/dropzone.css">
+
+<style>
+	img.b64image {
+	   padding:1px;
+	   border:2px solid #00ff00;
+	}
+	
+	img.bindata {
+	   padding:1px;
+	   border:2px solid #ff0000;
+	}
+	
+</style>
+
+<script>
+
+    /**
+     * Get image type via magic number.
+     * Extracts first 2 bytes and converts to hex.
+     * More info on magic numbers: http://www.garykessler.net/library/file_sigs.html
+     */
+    function getImageType(arrayBuffer){
+    	 
+    	//console.log("getImageType " + arrayBuffer)
+    	 
+        var type = "";
+        var dv = new DataView(arrayBuffer,0,5);
+        var nume1 = dv.getUint8(0,true);
+        var nume2 = dv.getUint8(1,true);
+        var hex = nume1.toString(16) + nume2.toString(16) ;
+        switch(hex){
+            case "8950":
+                type = "image/png";
+                break;
+            case "4749":
+                type = "image/gif";
+                break;
+            case "424d":
+                type = "image/bmp";
+                break;
+            case "ffd8":
+                type = "image/jpeg";
+                break;
+            case "2550":
+                type = "application/pdf";
+                break;
+            case "504b":
+                type = "application/zip";
+                break;
+            default:
+            	console.log("NO TYPE " + hex)
+                type = "data/bin";
+                break;
+        }
+    	//console.log("TYPE " + type)
+        return type;
+    }
+
+	function is_base64(val) {
+		return typeof(val) == "string" 
+				&& val.length > 100
+				&& (val.length % 4) == 0
+	}
+	
+	function walk(obj, result) {
+
+	  //console.log(obj);
+	  for (var key in obj) {
+		//console.log("k: " + key);
+	    if (obj.hasOwnProperty(key)) {
+	      var val = obj[key];
+	      //console.log("v: " + val);
+	      if (typeof(val) == "object") {
+	      	walk(val, result);
+	      }
+	      else {
+	    	if (is_base64(val)) {
+	  	      	//console.log("Ok, add");
+		    	result.push(val);
+	    	}
+	      }
+	    }
+	  }
+	  return result
+	}
+	
+	function blob2bytes(blob) {
+	    return new Promise(function (fulfilled, rejected) {
+			var arrayBuffer;
+			var fileReader = new FileReader();
+			fileReader.onload = function() {
+            	fulfilled( this.result )
+			};
+			fileReader.readAsArrayBuffer(blob);
+	    })
+
+	}
+	
+	Dropzone.options.myAwesomeDropzone = {
+		autoProcessQueue: false,
+		paramName: "file", // The name that will be used to transfer the file
+		maxFilesize: 5, // MB
+		parallelUploads: 10,
+		uploadMultiple: true,
+
+		accept: function(file, done) {
+		    var reader = new FileReader();
+	        reader.addEventListener("loadend", function(event) { 
+	        	
+	        	prog = document.getElementsByClassName("dz-progress");
+	        	for (var pr of prog)
+	        		pr.style.display = 'none'
+	        	//prog[0].style.display = 'none'
+	            //prog[0].style.visibility = 'hidden'
+	        	console.log()
+
+	        	
+	        	content = event.target.result
+	        	//console.log(content);
+	        	content = content.replace(/\n/g, "")
+	        	content = content.replace(/\r/g, "")
+	    		
+	        	//TODO: gestire errori
+			    try {
+	        		var jsn = JSON.parse(content)
+        			var res = walk(jsn, []);
+			    } catch(e) {
+			       console.log("Error parsing json " + e)
+			       //file.previewTemplate.appendChild(document.createTextNode("ERROR"));
+				   file.previewElement.classList.add("dz-error");
+	        	   return
+			    }
+	    		
+	            imgsDiv = document.getElementById("images")
+				for (var i = 0; i < res.length; i++) {
+					
+		            data = "data:application/octet-stream;base64," + res[i]
+		            
+		    		var img = document.createElement("img");
+		            img.setAttribute("height", "200");
+		            img.setAttribute("class", "b64image");
+		            img.src = data
+		            
+		            function generate_img(num, cimg, cdata){
+		            	
+			        	//TODO: gestire errori
+		            	fetch(data)
+							.then(res => res.blob())
+							.then(blob => blob2bytes(blob))
+							.then(function(ab) {
+								ext = getImageType(ab).split("/")[1]
+								no_ext = "image"
+								if (ext == "bin") {
+									cimg.setAttribute("class", "b64image bindata");
+									no_ext = "data"
+								}
+								cimg.dataset.filename = no_ext + num + "." + ext
+								
+					    		var a = document.createElement("a");
+					    		a.id = "download_img"+ num
+					            a.setAttribute("href", cdata);
+					            a.setAttribute("download", cimg.dataset.filename)
+								//a.innerHTML = "Download" + num
+								
+					            a.appendChild(cimg);
+								
+							    imgsDiv.appendChild(a);
+							})
+		            }
+		            generate_img(i, img, data)
+		            
+		            imgsDiv.style.display = "inline-block"
+				}
+
+	    		//console.log(res)
+	       	});
+	        content = reader.readAsText(file);
+	        
+	        //this.removeFile(file);
+	        
+	        //done()
+	        console.log(">" + file.previewElement.classList)
+	        file.previewElement.classList.add("dz-success");
+		},
+
+	  	init: function() {
+	  		/*
+		    var submitButton = document.querySelector("#submit-all")
+		        myDropzone = this; // closure
+
+		    submitButton.addEventListener("click", function() {
+		      upload_called = false
+		      myDropzone.processQueue(); // Tell Dropzone to process all queued files.
+		    });
+		    */
+
+		    var clearButton = document.querySelector("#clear-all")
+		    clearButton.addEventListener("click", function() {
+		      Dropzone.options.myAwesomeDropzone.removeAllFiles(true);
+			  imgsDiv.style.display = "none"
+			  document.getElementById("images").innerHTML = ""
+		   	});
+
+		    var zipButton = document.querySelector("#zip-all")
+		    zipButton.addEventListener("click", function() {
+
+				imgs = document.getElementsByClassName("b64image");
+				zip_files = []
+				var zip = new JSZip();
+				for (var idx = 0; idx < imgs.length; idx++) {
+					img = imgs[idx]
+		            function add_file(data, filename, num){
+						return fetch(data)
+							.then(res => res.blob())
+							.then(blob => {
+								ext = filename.split('.').pop()
+								no_ext = filename.slice(0, -ext.length-2)
+								uniq_name = no_ext + num + "." + ext
+								zip.file(uniq_name, blob, { binary: true })
+							})
+					}
+					p = add_file(img.src, img.dataset.filename, idx)
+					zip_files.push(p)
+				}
+				
+				Promise.all(zip_files)
+					.then(function() {
+						zip.generateAsync({type:"blob"})
+							.then(function(content) {
+							    saveAs(content, "images.zip");
+						});
+					})
+		    });
+		    
+
+		    // You might want to show the submit button only when 
+		    // files are dropped here:
+		    this.on("addedfile", function() {
+		      // Show submit button here and/or inform user to click it.
+		    });
+
+		  },
+		  
+		  complete:function(file) {
+			  //Dropzone.options.myAwesomeDropzone.removeFile(file);
+			  alert(123)
+		  }
+	};
+
+</script>
+
+<p>
+  <b>JSON2IMG</b>: visualize and download base64 images and data from json files.
+</p>
+
+
+<!-- Change /upload-target to your upload address -->
+<form action="/upload" class="dropzone" id="myAwesomeDropzone">
+	<div class="dz-message" data-dz-message><span>Drop files here (click to browse)</span></div>
+</form>
+
+<!--
+-->
+
+<p>
+<div id="images">
+</div>
+<p>Click on the images to download individually or <button id="zip-all">Download all</button> - <button id="clear-all">Clear all</button>
+
+
+
+
+
+
+
