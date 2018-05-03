@@ -37,12 +37,24 @@ app.config['JSON_SORT_KEYS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['WORK_FOLDER'] = WORK_FOLDER
 
-root_dir = os.path.join(os.path.dirname(os.getcwd()), "json2bins")
+root_dir = os.path.join(os.path.dirname(os.getcwd()), "json2img")
 
 @app.route('/')
 def index():
     print("index", root_dir)
     return send_from_directory(root_dir, "index.html")
+
+@app.route('/json2img/<path>/<filename>')
+def files_1l(path, filename):
+    return send_from_directory(root_dir, path + "/" + filename)
+
+@app.route('/json2img/<p1>/<p2>/<filename>')
+def files_2l(p1, p2, filename):
+    return send_from_directory(root_dir, p1 + "/" + p2 + "/" + filename)
+
+@app.route('/json2img/<p1>/<p2>/<p3>/<filename>')
+def files_3l(p1, p2, p3, filename):
+    return send_from_directory(root_dir, p1 + "/" + p2 + "/" + p3 + "/" + filename)
 
 @app.route('/status', methods=['GET'])
 def get_status():
@@ -89,7 +101,7 @@ def extract_data():
     print("fine")
     return jsonify(response)
 
-@app.route('/files/<filename>', methods=['GET',])
+@app.route('/json2img/<filename>', methods=['GET',])
 def files(filename):
     basename = os.path.basename(filename)
     print(root_dir, basename)
