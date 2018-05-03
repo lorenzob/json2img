@@ -167,7 +167,11 @@
 				   file.previewElement.classList.add("dz-error");
 	        	   return
 			    }
-	    		
+
+			    b64imgs = document.getElementsByClassName("b64image");
+	            offset = b64imgs.length
+	            console.log(offset)
+
 	            imgsDiv = document.getElementById("images")
 				for (var i = 0; i < res.length; i++) {
 					
@@ -203,7 +207,7 @@
 							    imgsDiv.appendChild(a);
 							})
 		            }
-		            generate_img(i, img, data)
+		            generate_img(offset+i, img, data)
 		            
 		            imgsDiv.style.display = "inline-block"
 				}
