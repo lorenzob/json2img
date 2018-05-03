@@ -1,0 +1,14 @@
+{
+  "version": "0.1.0", 
+  "request-id": "123", 
+  "images": [
+    {
+      "text-data": [
+        {
+          "text": "BONAPARTE", 
+      "image_portrait": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAIAAAACDbGyAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4gUCESwdsmKZ4gAAAFtJREFUCNcBUACv/wBJSUmpqan////+5ubzPDwA////KSkpY2Nj////+q6uAP///7m5uREREbi4uP///wCi4a/////X19clJSXq6uoDLmU69/35OSAzJiYmhoaG2swvqwS4wDAAAAAASUVORK5CYII="
+        }
+    ]
+    }
+  ]
+}
